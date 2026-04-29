@@ -1,0 +1,12 @@
+node_modules
+dist
+server
+.arts
+.codeartsdoer
+.github
+*.env
+.env
+*.db
+*.bak
+*.ps1
+*.py
