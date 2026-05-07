@@ -8,6 +8,7 @@ const CHAPTER_PATTERNS = [
   /^第[零一二三四五六七八九十百千万\d]+节/,
   /^Chapter\s+\d+/i,
   /^卷[零一二三四五六七八九十百千万\d]+/,
+  /^-{3,}$/,  // 分隔线 ----
 ]
 
 function parseTxtToChapters(content: string) {
@@ -16,15 +17,20 @@ function parseTxtToChapters(content: string) {
   let currentTitle = ''
   let currentLines: string[] = []
   let chapterNum = 0
+  let lastWasSeparator = false
 
-  for (const line of lines) {
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]
     const trimmed = line.trim()
     let matched = false
+
     for (const pattern of CHAPTER_PATTERNS) {
       if (pattern.test(trimmed)) {
+        const isSeparator = /^-{3,}$/.test(trimmed)
+
         if (currentTitle || currentLines.length > 0) {
           const chapterContent = currentLines.join('\n').trim()
-          if (chapterContent) {
+          if (chapterContent && chapterContent.length > 50) {
             chapterNum++
             chapters.push({
               title: currentTitle || `第${chapterNum}章`,
@@ -34,20 +40,32 @@ function parseTxtToChapters(content: string) {
             })
           }
         }
-        currentTitle = trimmed
+
+        if (isSeparator) {
+          currentTitle = ''
+          lastWasSeparator = true
+        } else {
+          currentTitle = trimmed
+          lastWasSeparator = false
+        }
         currentLines = []
         matched = true
         break
       }
     }
+
     if (!matched) {
-      currentLines.push(line)
+      if (lastWasSeparator && trimmed && trimmed.length < 50 && !currentTitle) {
+        currentTitle = trimmed
+        lastWasSeparator = false
+      } else {
+        currentLines.push(line)
+      }
     }
   }
 
-  // 最后一章
   const lastContent = currentLines.join('\n').trim()
-  if (lastContent) {
+  if (lastContent && lastContent.length > 50) {
     chapterNum++
     chapters.push({
       title: currentTitle || `第${chapterNum}章`,
@@ -55,6 +73,37 @@ function parseTxtToChapters(content: string) {
       chapterNumber: chapterNum,
       wordCount: lastContent.length,
     })
+  }
+
+  // 如果章节太少，尝试按段落分割
+  if (chapters.length < 10 && content.length > 100000) {
+    const paragraphChunks: string[] = []
+    const paragraphs = content.split(/\n{2,}/)
+    let chunk = ''
+    let chunkSize = 0
+    const targetSize = 3000  // 每章约3000字
+    
+    for (const p of paragraphs) {
+      if (chunkSize + p.length > targetSize && chunk.length > 1000) {
+        paragraphChunks.push(chunk.trim())
+        chunk = ''
+        chunkSize = 0
+      }
+      chunk += p + '\n\n'
+      chunkSize += p.length
+    }
+    if (chunk.trim().length > 1000) {
+      paragraphChunks.push(chunk.trim())
+    }
+    
+    if (paragraphChunks.length > chapters.length) {
+      return paragraphChunks.map((c, i) => ({
+        title: `第${i + 1}章`,
+        content: c,
+        chapterNumber: i + 1,
+        wordCount: c.length,
+      }))
+    }
   }
 
   return chapters
@@ -148,11 +197,23 @@ export async function registerNovelService(fastify: FastifyInstance) {
     }
 
     const buffer = await data.toBuffer()
-    if (buffer.length > 10 * 1024 * 1024) {
-      return reply.code(400).send({ code: 400, data: null, message: '文件大小超过10MB限制' })
+    if (buffer.length > 100 * 1024 * 1024) {
+      return reply.code(400).send({ code: 400, data: null, message: '文件大小超过100MB限制' })
     }
 
-    const content = buffer.toString('utf-8')
+    // 检测编码：尝试UTF-8，失败则用GBK
+    let content = ''
+    const utf8Content = buffer.toString('utf-8')
+    const hasReplacementChar = utf8Content.substring(0, 10000).includes('\uFFFD')
+    const hasControlChars = /[\x00-\x08\x0B\x0C\x0E-\x1F]/.test(utf8Content.substring(0, 10000))
+
+    if (!hasReplacementChar && !hasControlChars) {
+      content = utf8Content
+    } else {
+      const gbkDecoder = new TextDecoder('gbk')
+      content = gbkDecoder.decode(buffer)
+    }
+
     const chapters = parseTxtToChapters(content)
 
     if (chapters.length === 0) {
@@ -420,7 +481,7 @@ export async function registerNovelService(fastify: FastifyInstance) {
   })
 
   // GET /api/novels/:id - 获取小说详情
-  fastify.get('/api/novels/:id', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+  fastify.get('/api/novels/:id', async (request, reply) => {
     const { id } = request.params as { id: string }
     const novel = await fastify.prisma.novel.findUnique({
       where: { id },
@@ -433,14 +494,14 @@ export async function registerNovelService(fastify: FastifyInstance) {
   })
 
   // DELETE /api/novels/:id
-  fastify.delete('/api/novels/:id', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+  fastify.delete('/api/novels/:id', async (request, reply) => {
     const { id } = request.params as { id: string }
     await fastify.prisma.novel.delete({ where: { id } })
     return reply.send({ code: 200, data: null, message: 'ok' })
   })
 
   // PATCH /api/novels/:id - 更新小说（重命名、收藏等）
-  fastify.patch('/api/novels/:id', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+  fastify.patch('/api/novels/:id', async (request, reply) => {
     const { id } = request.params as { id: string }
     const body = request.body as { title?: string; author?: string; isFavorite?: boolean }
     const data: any = {}
@@ -456,7 +517,7 @@ export async function registerNovelService(fastify: FastifyInstance) {
   })
 
   // GET /api/novels/:id/chapters - 获取章节列表
-  fastify.get('/api/novels/:id/chapters', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+  fastify.get('/api/novels/:id/chapters', async (request, reply) => {
     const { id } = request.params as { id: string }
     const chapters = await fastify.prisma.chapter.findMany({
       where: { novelId: id },
@@ -467,7 +528,7 @@ export async function registerNovelService(fastify: FastifyInstance) {
   })
 
   // GET /api/novels/:id/chapters/:num - 获取章节内容
-  fastify.get('/api/novels/:id/chapters/:num', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+  fastify.get('/api/novels/:id/chapters/:num', async (request, reply) => {
     const { id, num } = request.params as { id: string; num: string }
     const chapter = await fastify.prisma.chapter.findFirst({
       where: { novelId: id, chapterNumber: Number(num) },
@@ -479,8 +540,8 @@ export async function registerNovelService(fastify: FastifyInstance) {
   })
 
   // GET /api/novels/:id/progress
-  fastify.get('/api/novels/:id/progress', { preHandler: [fastify.authenticate] }, async (request, reply) => {
-    const userId = (request.user as any).id
+  fastify.get('/api/novels/:id/progress', async (request, reply) => {
+    const userId = 'anonymous'
     const { id } = request.params as { id: string }
     const progress = await fastify.prisma.readingProgress.findUnique({
       where: { userId_novelId: { userId, novelId: id } },
@@ -489,8 +550,8 @@ export async function registerNovelService(fastify: FastifyInstance) {
   })
 
   // PUT /api/novels/:id/progress
-  fastify.put('/api/novels/:id/progress', { preHandler: [fastify.authenticate] }, async (request, reply) => {
-    const userId = (request.user as any).id
+  fastify.put('/api/novels/:id/progress', async (request, reply) => {
+    const userId = 'anonymous'
     const { id } = request.params as { id: string }
     const { chapterId, scrollPosition } = request.body as { chapterId: string; scrollPosition: number }
 
@@ -504,8 +565,8 @@ export async function registerNovelService(fastify: FastifyInstance) {
   })
 
   // GET /api/novels/:id/bookmarks
-  fastify.get('/api/novels/:id/bookmarks', { preHandler: [fastify.authenticate] }, async (request, reply) => {
-    const userId = (request.user as any).id
+  fastify.get('/api/novels/:id/bookmarks', async (request, reply) => {
+    const userId = 'anonymous'
     const { id } = request.params as { id: string }
     const bookmarks = await fastify.prisma.bookmark.findMany({
       where: { userId, novelId: id },
@@ -515,8 +576,8 @@ export async function registerNovelService(fastify: FastifyInstance) {
   })
 
   // POST /api/novels/:id/bookmarks
-  fastify.post('/api/novels/:id/bookmarks', { preHandler: [fastify.authenticate] }, async (request, reply) => {
-    const userId = (request.user as any).id
+  fastify.post('/api/novels/:id/bookmarks', async (request, reply) => {
+    const userId = 'anonymous'
     const { id } = request.params as { id: string }
     const { chapterId, position, note } = request.body as { chapterId: string; position: number; note?: string }
 

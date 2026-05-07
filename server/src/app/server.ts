@@ -12,7 +12,10 @@ const PORT = Number(process.env.PORT) || 3000
 const HOST = process.env.HOST || '0.0.0.0'
 
 async function start() {
-  const fastify = Fastify({ logger: true })
+  const fastify = Fastify({ 
+    logger: true,
+    bodyLimit: 100 * 1024 * 1024  // 100MB
+  })
 
   // 注册插件
   await fastify.register(cors, {
@@ -28,7 +31,14 @@ async function start() {
   await fastify.register(prismaPlugin)
   await fastify.register(redisPlugin)
   await fastify.register(jwtPlugin)
-  await fastify.register(multipart, { limits: { fileSize: 10 * 1024 * 1024 } })
+  await fastify.register(multipart, { 
+    limits: { 
+      fileSize: 100 * 1024 * 1024,
+      files: 1,
+      fieldSize: 100 * 1024 * 1024,
+      headerPairs: 100
+    } 
+  })
 
   // 注册路由
   registerRoutes(fastify)

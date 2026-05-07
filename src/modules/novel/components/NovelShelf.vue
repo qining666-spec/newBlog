@@ -103,14 +103,81 @@
     <!-- Upload Modal -->
     <Teleport to="body">
       <Transition name="modal">
-        <div v-if="showUpload" class="fixed inset-0 flex items-center justify-center z-50" @click.self="showUpload = false">
+        <div v-if="showUpload" class="fixed inset-0 flex items-center justify-center z-50" @click.self="!uploadLoading && (showUpload = false)">
           <div class="absolute inset-0 bg-black/40 backdrop-blur-sm"></div>
           <div class="relative card-elevated w-full max-w-md p-6">
             <h2 class="text-xl font-display font-bold text-foreground mb-6">导入技术文档</h2>
-            <input type="file" accept=".txt" @change="handleFileSelect" class="w-full mb-6 text-sm text-foreground file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:bg-accent/10 file:text-accent file:font-medium hover:file:bg-accent/20 file:transition-colors file:cursor-pointer" />
+            
+            <!-- File Input -->
+            <input type="file" accept=".txt" @change="handleFileSelect" :disabled="uploadLoading"
+              class="w-full mb-4 text-sm text-foreground file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:bg-accent/10 file:text-accent file:font-medium hover:file:bg-accent/20 file:transition-colors file:cursor-pointer" />
+            
+            <!-- Selected File Info -->
+            <div v-if="selectedFile" class="mb-4 p-4 rounded-xl bg-muted/50">
+              <div class="flex items-center gap-3">
+                <svg class="w-8 h-8 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                </svg>
+                <div class="flex-1 min-w-0">
+                  <p class="text-sm font-medium text-foreground truncate">{{ selectedFile.name }}</p>
+                  <p class="text-xs text-muted-foreground">{{ formatFileSize(selectedFile.size) }}</p>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Upload Progress -->
+            <div v-if="uploadLoading" class="mb-4 space-y-3">
+              <div class="h-2 rounded-full bg-muted overflow-hidden">
+                <div class="h-full transition-all duration-300 rounded-full" 
+                  :style="`width: ${uploadProgress}%`"
+                  style="background: linear-gradient(135deg, #0052FF, #4D7CFF)"></div>
+              </div>
+              <div class="flex justify-between text-xs">
+                <span class="text-muted-foreground">{{ uploadStatus }}</span>
+                <span class="font-medium text-accent">{{ uploadProgress }}%</span>
+              </div>
+            </div>
+            
+            <!-- Upload Success -->
+            <div v-if="uploadSuccess" class="mb-4 px-4 py-3 rounded-xl bg-emerald-50 text-emerald-600 text-sm">
+              <div class="flex items-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                </svg>
+                <span>{{ uploadSuccess }}</span>
+              </div>
+            </div>
+            
+            <!-- Upload Error -->
+            <div v-if="uploadError" class="mb-4 px-4 py-3 rounded-xl bg-red-50 text-red-500 text-sm">
+              <div class="flex items-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                <span>{{ uploadError }}</span>
+              </div>
+            </div>
+            
+            <!-- Tips -->
+            <div v-if="!uploadLoading && !uploadSuccess" class="mb-4 px-4 py-3 rounded-xl bg-blue-50 text-blue-600 text-xs">
+              <p class="font-medium mb-1">导入提示：</p>
+              <ul class="space-y-1 list-disc list-inside">
+                <li>支持 .txt 纯文本格式</li>
+                <li>文件大小限制 100MB</li>
+                <li>自动识别章节（第X章、分隔线等）</li>
+                <li>大文件导入需要较长时间，请耐心等待</li>
+              </ul>
+            </div>
+            
             <div class="flex gap-3 justify-end">
-              <button @click="showUpload = false" class="btn-secondary">取消</button>
-              <button @click="handleUpload" :disabled="!selectedFile" class="btn-primary disabled:opacity-50 disabled:pointer-events-none">导入</button>
+              <button @click="showUpload = false; resetUpload()" :disabled="uploadLoading" class="btn-secondary disabled:opacity-50">取消</button>
+              <button @click="handleUpload" :disabled="!selectedFile || uploadLoading" class="btn-primary disabled:opacity-50 disabled:pointer-events-none">
+                <svg v-if="uploadLoading" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                </svg>
+                <span>{{ uploadLoading ? '导入中...' : '导入' }}</span>
+              </button>
             </div>
           </div>
         </div>
@@ -222,6 +289,11 @@ const showCrawl = ref(false)
 const showRename = ref(false)
 const showDeleteConfirm = ref(false)
 const selectedFile = ref<File | null>(null)
+const uploadLoading = ref(false)
+const uploadProgress = ref(0)
+const uploadStatus = ref('')
+const uploadError = ref('')
+const uploadSuccess = ref('')
 const crawlUrl = ref('')
 const crawlTitle = ref('')
 const crawlMaxChapters = ref(100)
@@ -261,20 +333,84 @@ async function fetchNovels() {
   }
 }
 
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`
+}
+
 function handleFileSelect(e: Event) {
   const target = e.target as HTMLInputElement
   selectedFile.value = target.files?.[0] || null
+  uploadError.value = ''
+  uploadSuccess.value = ''
+}
+
+function resetUpload() {
+  selectedFile.value = null
+  uploadLoading.value = false
+  uploadProgress.value = 0
+  uploadStatus.value = ''
+  uploadError.value = ''
+  uploadSuccess.value = ''
 }
 
 async function handleUpload() {
   if (!selectedFile.value) return
+  
+  uploadLoading.value = true
+  uploadProgress.value = 0
+  uploadError.value = ''
+  uploadSuccess.value = ''
+  
   const formData = new FormData()
   formData.append('file', selectedFile.value)
-  const res = await upload<Novel>('/novels/upload', formData)
-  if (res.code === 200) {
-    showUpload.value = false
-    selectedFile.value = null
-    await fetchNovels()
+  
+  const fileSize = selectedFile.value.size
+  const fileName = selectedFile.value.name
+  
+  try {
+    // Simulate progress for better UX
+    uploadStatus.value = '正在上传文件...'
+    const progressInterval = setInterval(() => {
+      if (uploadProgress.value < 30) {
+        uploadProgress.value += 2
+      }
+    }, 100)
+    
+    const res = await upload<Novel>('/novels/upload', formData)
+    
+    clearInterval(progressInterval)
+    
+    if (res.code === 200 && res.data) {
+      uploadProgress.value = 100
+      uploadStatus.value = '导入完成'
+      
+      const novel = res.data as any
+      const chapterCount = novel._count?.chapters || 0
+      uploadSuccess.value = `导入成功！共解析 ${chapterCount} 章节`
+      
+      setTimeout(() => {
+        showUpload.value = false
+        resetUpload()
+        fetchNovels()
+      }, 2000)
+    } else {
+      uploadProgress.value = 0
+      uploadError.value = res.message || '导入失败，请检查文件格式'
+    }
+  } catch (err: any) {
+    uploadProgress.value = 0
+    const msg = err.response?.data?.message || err.message || '导入失败'
+    if (msg.includes('too large') || msg.includes('超过')) {
+      uploadError.value = '文件太大，请选择小于100MB的文件'
+    } else if (msg.includes('章节')) {
+      uploadError.value = '无法解析章节，请检查文件格式'
+    } else {
+      uploadError.value = msg
+    }
+  } finally {
+    uploadLoading.value = false
   }
 }
 

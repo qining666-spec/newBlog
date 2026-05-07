@@ -188,6 +188,7 @@
 <script setup lang="ts">
 import { ref, reactive, nextTick, onMounted } from 'vue'
 import { post, get, del, put } from '@shared/api/client'
+import { encryptSync, decryptSync } from '@shared/utils/crypto'
 
 interface ChatMessage { role: 'user' | 'assistant'; content: string }
 interface KnowledgeCard { id: string; title: string; content: string; tags: string[] }
@@ -203,7 +204,7 @@ const showAddCard = ref(false)
 const messageList = ref<HTMLDivElement>()
 
 const config = reactive({
-  apiKey: localStorage.getItem('ai_api_key') || '',
+  apiKey: decryptSync(localStorage.getItem('ai_api_key') || ''),
   baseUrl: localStorage.getItem('ai_base_url') || 'https://api.siliconflow.cn/v1',
   model: localStorage.getItem('ai_model') || 'Qwen/Qwen2.5-7B-Instruct',
   temperature: parseFloat(localStorage.getItem('ai_temperature') || '0.7'),
@@ -242,7 +243,7 @@ function switchPlatform(platform: string) {
 }
 
 function saveConfig() {
-  localStorage.setItem('ai_api_key', config.apiKey)
+  localStorage.setItem('ai_api_key', encryptSync(config.apiKey))
   localStorage.setItem('ai_base_url', config.baseUrl)
   localStorage.setItem('ai_model', config.model)
   localStorage.setItem('ai_temperature', String(config.temperature))

@@ -14,19 +14,13 @@ interface AiConfig {
   topP: number
 }
 
-interface KnowledgeCard {
-  id: string
-  title: string
-  content: string
-  tags: string[]
+function getUserId(request: any): string {
+  return request.user?.id || 'anonymous'
 }
-
-const knowledgeCards: KnowledgeCard[] = []
 
 export async function registerAiService(fastify: FastifyInstance) {
 
-  // POST /api/ai/chat - AI对话
-  fastify.post('/api/ai/chat', async (request, reply) => {
+  fastify.post('/api/ai/chat', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const { messages, config, knowledgeIds } = request.body as {
       messages: ChatMessage[]
       config: AiConfig
@@ -42,28 +36,27 @@ export async function registerAiService(fastify: FastifyInstance) {
     }
 
     try {
-      // 构建系统提示词
       let systemPrompt = '你是一个有用的AI助手。'
       
-      // 注入知识库内容
       if (knowledgeIds?.length) {
-        const selectedCards = knowledgeCards.filter(c => knowledgeIds.includes(c.id))
-        if (selectedCards.length > 0) {
+        const userId = getUserId(request)
+        const cards = await fastify.prisma.aiKnowledge.findMany({
+          where: { id: { in: knowledgeIds }, userId }
+        })
+        if (cards.length > 0) {
           systemPrompt += '\n\n## 知识库参考信息\n\n'
-          for (const card of selectedCards) {
+          for (const card of cards) {
             systemPrompt += `### ${card.title}\n${card.content}\n\n`
           }
           systemPrompt += '请基于以上知识库信息回答用户问题。如果知识库中没有相关信息，请基于你的知识回答。'
         }
       }
 
-      // 构建请求消息
       const apiMessages: ChatMessage[] = [
         { role: 'system', content: systemPrompt },
         ...messages,
       ]
 
-      // 调用OpenAI兼容API
       const baseUrl = config.baseUrl || 'https://api.deepseek.com'
       const apiUrl = `${baseUrl}/chat/completions`
 
@@ -116,8 +109,7 @@ export async function registerAiService(fastify: FastifyInstance) {
     }
   })
 
-  // POST /api/ai/chat/stream - AI流式对话
-  fastify.post('/api/ai/chat/stream', async (request, reply) => {
+  fastify.post('/api/ai/chat/stream', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const { messages, config, knowledgeIds } = request.body as {
       messages: ChatMessage[]
       config: AiConfig
@@ -132,10 +124,13 @@ export async function registerAiService(fastify: FastifyInstance) {
       let systemPrompt = '你是一个有用的AI助手。'
       
       if (knowledgeIds?.length) {
-        const selectedCards = knowledgeCards.filter(c => knowledgeIds.includes(c.id))
-        if (selectedCards.length > 0) {
+        const userId = getUserId(request)
+        const cards = await fastify.prisma.aiKnowledge.findMany({
+          where: { id: { in: knowledgeIds }, userId }
+        })
+        if (cards.length > 0) {
           systemPrompt += '\n\n## 知识库参考信息\n\n'
-          for (const card of selectedCards) {
+          for (const card of cards) {
             systemPrompt += `### ${card.title}\n${card.content}\n\n`
           }
           systemPrompt += '请基于以上知识库信息回答用户问题。如果知识库中没有相关信息，请基于你的知识回答。'
@@ -176,7 +171,6 @@ export async function registerAiService(fastify: FastifyInstance) {
         })
       }
 
-      // 流式响应
       reply.raw.writeHead(200, {
         'Content-Type': 'text/event-stream',
         'Cache-Control': 'no-cache',
@@ -211,15 +205,24 @@ export async function registerAiService(fastify: FastifyInstance) {
     }
   })
 
-  // ---- 知识库（用户卡片）接口 ----
-
-  // GET /api/ai/knowledge - 获取知识库卡片列表
-  fastify.get('/api/ai/knowledge', async (request, reply) => {
-    return reply.send({ code: 200, data: knowledgeCards, message: 'ok' })
+  fastify.get('/api/ai/knowledge', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+    const userId = getUserId(request)
+    const cards = await fastify.prisma.aiKnowledge.findMany({
+      where: { userId },
+      orderBy: { updatedAt: 'desc' }
+    })
+    return reply.send({ 
+      code: 200, 
+      data: cards.map(c => ({
+        ...c,
+        tags: JSON.parse(c.tags)
+      })), 
+      message: 'ok' 
+    })
   })
 
-  // POST /api/ai/knowledge - 创建知识库卡片
-  fastify.post('/api/ai/knowledge', async (request, reply) => {
+  fastify.post('/api/ai/knowledge', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+    const userId = getUserId(request)
     const { title, content, tags } = request.body as {
       title: string
       content: string
@@ -230,19 +233,23 @@ export async function registerAiService(fastify: FastifyInstance) {
       return reply.code(400).send({ code: 400, data: null, message: '标题和内容不能为空' })
     }
 
-    const card: KnowledgeCard = {
-      id: `card_${Date.now()}`,
-      title,
-      content,
-      tags: tags || [],
-    }
-
-    knowledgeCards.push(card)
-    return reply.send({ code: 200, data: card, message: 'ok' })
+    const card = await fastify.prisma.aiKnowledge.create({
+      data: {
+        userId,
+        title,
+        content,
+        tags: JSON.stringify(tags || []),
+      },
+    })
+    return reply.send({ 
+      code: 200, 
+      data: { ...card, tags: JSON.parse(card.tags) }, 
+      message: 'ok' 
+    })
   })
 
-  // PUT /api/ai/knowledge/:id - 更新知识库卡片
-  fastify.put('/api/ai/knowledge/:id', async (request, reply) => {
+  fastify.put('/api/ai/knowledge/:id', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+    const userId = getUserId(request)
     const { id } = request.params as { id: string }
     const { title, content, tags } = request.body as {
       title?: string
@@ -250,53 +257,68 @@ export async function registerAiService(fastify: FastifyInstance) {
       tags?: string[]
     }
 
-    const idx = knowledgeCards.findIndex(c => c.id === id)
-    if (idx === -1) {
+    const existing = await fastify.prisma.aiKnowledge.findFirst({
+      where: { id, userId }
+    })
+    if (!existing) {
       return reply.code(404).send({ code: 404, data: null, message: '卡片不存在' })
     }
 
-    if (title) knowledgeCards[idx].title = title
-    if (content) knowledgeCards[idx].content = content
-    if (tags) knowledgeCards[idx].tags = tags
+    const data: any = {}
+    if (title !== undefined) data.title = title
+    if (content !== undefined) data.content = content
+    if (tags !== undefined) data.tags = JSON.stringify(tags)
 
-    return reply.send({ code: 200, data: knowledgeCards[idx], message: 'ok' })
+    const card = await fastify.prisma.aiKnowledge.update({
+      where: { id },
+      data,
+    })
+    return reply.send({ 
+      code: 200, 
+      data: { ...card, tags: JSON.parse(card.tags) }, 
+      message: 'ok' 
+    })
   })
 
-  // DELETE /api/ai/knowledge/:id - 删除知识库卡片
-  fastify.delete('/api/ai/knowledge/:id', async (request, reply) => {
+  fastify.delete('/api/ai/knowledge/:id', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+    const userId = getUserId(request)
     const { id } = request.params as { id: string }
-    const idx = knowledgeCards.findIndex(c => c.id === id)
-    if (idx === -1) {
+    
+    const existing = await fastify.prisma.aiKnowledge.findFirst({
+      where: { id, userId }
+    })
+    if (!existing) {
       return reply.code(404).send({ code: 404, data: null, message: '卡片不存在' })
     }
 
-    const deleted = knowledgeCards.splice(idx, 1)[0]
-    return reply.send({ code: 200, data: deleted, message: 'ok' })
+    await fastify.prisma.aiKnowledge.delete({ where: { id } })
+    return reply.send({ code: 200, data: null, message: 'ok' })
   })
 
-  // ---- 对话历史接口 ----
-
-  // GET /api/ai/conversations - 获取对话列表
-  fastify.get('/api/ai/conversations', async (request, reply) => {
+  fastify.get('/api/ai/conversations', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+    const userId = getUserId(request)
     const conversations = await fastify.prisma.aiConversation.findMany({
+      where: { userId },
       orderBy: { updatedAt: 'desc' },
       take: 50,
     })
     return reply.send({ code: 200, data: conversations, message: 'ok' })
   })
 
-  // GET /api/ai/conversations/:id - 获取对话详情
-  fastify.get('/api/ai/conversations/:id', async (request, reply) => {
+  fastify.get('/api/ai/conversations/:id', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+    const userId = getUserId(request)
     const { id } = request.params as { id: string }
-    const conv = await fastify.prisma.aiConversation.findUnique({ where: { id } })
+    const conv = await fastify.prisma.aiConversation.findFirst({
+      where: { id, userId }
+    })
     if (!conv) {
       return reply.code(404).send({ code: 404, data: null, message: '对话不存在' })
     }
     return reply.send({ code: 200, data: conv, message: 'ok' })
   })
 
-  // POST /api/ai/conversations - 创建/保存对话
-  fastify.post('/api/ai/conversations', async (request, reply) => {
+  fastify.post('/api/ai/conversations', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+    const userId = getUserId(request)
     const { title, model, messages, config, knowledge } = request.body as {
       title: string
       model: string
@@ -307,6 +329,7 @@ export async function registerAiService(fastify: FastifyInstance) {
 
     const conv = await fastify.prisma.aiConversation.create({
       data: {
+        userId,
         title: title || '新对话',
         model: model || 'unknown',
         messages: JSON.stringify(messages),
@@ -317,8 +340,8 @@ export async function registerAiService(fastify: FastifyInstance) {
     return reply.send({ code: 200, data: conv, message: 'ok' })
   })
 
-  // PUT /api/ai/conversations/:id - 更新对话
-  fastify.put('/api/ai/conversations/:id', async (request, reply) => {
+  fastify.put('/api/ai/conversations/:id', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+    const userId = getUserId(request)
     const { id } = request.params as { id: string }
     const { title, model, messages, config, knowledge } = request.body as {
       title?: string
@@ -326,6 +349,13 @@ export async function registerAiService(fastify: FastifyInstance) {
       messages?: any[]
       config?: any
       knowledge?: string[]
+    }
+
+    const existing = await fastify.prisma.aiConversation.findFirst({
+      where: { id, userId }
+    })
+    if (!existing) {
+      return reply.code(404).send({ code: 404, data: null, message: '对话不存在' })
     }
 
     const data: any = {}
@@ -342,9 +372,17 @@ export async function registerAiService(fastify: FastifyInstance) {
     return reply.send({ code: 200, data: conv, message: 'ok' })
   })
 
-  // DELETE /api/ai/conversations/:id - 删除对话
-  fastify.delete('/api/ai/conversations/:id', async (request, reply) => {
+  fastify.delete('/api/ai/conversations/:id', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+    const userId = getUserId(request)
     const { id } = request.params as { id: string }
+    
+    const existing = await fastify.prisma.aiConversation.findFirst({
+      where: { id, userId }
+    })
+    if (!existing) {
+      return reply.code(404).send({ code: 404, data: null, message: '对话不存在' })
+    }
+
     await fastify.prisma.aiConversation.delete({ where: { id } })
     return reply.send({ code: 200, data: null, message: 'ok' })
   })
