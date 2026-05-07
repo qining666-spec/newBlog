@@ -1,63 +1,70 @@
 <template>
-  <div class="h-full overflow-y-auto" style="background: #050506">
-      <div v-if="post" class="max-w-2xl mx-auto px-6 py-10">
-        <!-- 返回导航 -->
-        <div class="flex items-center justify-between mb-8">
-          <router-link to="/blog" class="inline-flex items-center gap-1.5 text-xs transition-colors duration-150" style="color: #525252" onmouseenter="this.style.color='#8A8F98'" onmouseleave="this.style.color='#525252'">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-            返回列表
-          </router-link>
-          <!-- 删除按钮 -->
-          <button v-if="isAuthor" @click="deletePost" class="px-3 py-1.5 rounded-lg text-xs transition-all duration-150" style="border: 1px solid rgba(239,68,68,0.3); color: #EF4444" onmouseenter="this.style.background='rgba(239,68,68,0.1)'" onmouseleave="this.style.background='transparent'">
-            删除文章
-          </button>
-        </div>
-
-        <!-- 文章头部 -->
-        <header class="mb-10">
-          <h1 class="text-3xl font-semibold mb-4" style="color: #EDEDEF; letter-spacing: -0.03em; line-height: 1.3">{{ post.title }}</h1>
-
-          <!-- 元信息 -->
-          <div class="flex items-center gap-3 flex-wrap mb-5">
-            <span class="text-xs" style="color: #525252">{{ formatDate(post.createdAt) }}</span>
-            <div class="w-1 h-1 rounded-full" style="background: #525252"></div>
-            <div class="flex items-center gap-1 text-xs" style="color: #525252">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-              {{ post.viewCount }} 次阅读
-            </div>
-          </div>
-
-          <!-- 标签 -->
-          <div class="flex items-center gap-2 flex-wrap">
-            <span v-for="tag in (Array.isArray(post.tags) ? post.tags : [])" :key="tag"
-              class="text-[11px] px-2 py-0.5 rounded-md"
-              style="background: rgba(99,102,241,0.08); color: #818CF8">#{{ tag }}</span>
-          </div>
-        </header>
-
-        <!-- 分隔线 -->
-        <div class="mb-10" style="height: 1px; background: linear-gradient(90deg, rgba(99,102,241,0.3), rgba(255,255,255,0.06), transparent)"></div>
-
-        <!-- 文章内容 -->
-        <article class="prose-invert" style="color: #C0C0C0; font-size: 15px; line-height: 1.8; letter-spacing: -0.01em" v-html="renderedContent"></article>
-
-        <!-- 底部分隔 -->
-        <div class="mt-12 mb-6" style="height: 1px; background: rgba(255,255,255,0.04)"></div>
-        <div class="flex items-center justify-between">
-          <span class="text-[11px]" style="color: #525252">最后更新于 {{ formatDate(post.updatedAt) }}</span>
-        </div>
+  <div class="max-w-4xl mx-auto">
+    <div v-if="post" class="space-y-8">
+      <!-- Back & Actions -->
+      <div class="flex items-center justify-between">
+        <router-link to="/blog" class="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+          </svg>
+          返回列表
+        </router-link>
+        <button v-if="isAuthor" @click="deletePost" class="btn-secondary !px-3 !py-2 text-sm text-red-500 hover:bg-red-50">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+          </svg>
+          删除
+        </button>
       </div>
 
-      <!-- 加载状态 -->
-      <div v-else class="flex flex-col items-center justify-center h-full">
-        <div class="flex gap-1.5 mb-4">
-          <div class="w-1.5 h-1.5 rounded-full animate-pulse" style="background: #6366F1; animation-delay: 0ms"></div>
-          <div class="w-1.5 h-1.5 rounded-full animate-pulse" style="background: #6366F1; animation-delay: 150ms"></div>
-          <div class="w-1.5 h-1.5 rounded-full animate-pulse" style="background: #6366F1; animation-delay: 300ms"></div>
+      <!-- Header -->
+      <header class="space-y-6">
+        <h1 class="text-4xl font-display font-bold text-foreground leading-tight">{{ post.title || '无标题' }}</h1>
+        
+        <div class="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+          <span>{{ formatDate(post.createdAt) }}</span>
+          <span class="w-1 h-1 rounded-full bg-muted-foreground"></span>
+          <div class="flex items-center gap-1">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+            </svg>
+            {{ post.viewCount }} 次阅读
+          </div>
         </div>
-        <p class="text-xs" style="color: #525252">加载中</p>
+
+        <div class="flex flex-wrap gap-2">
+          <span
+            v-for="tag in (Array.isArray(post.tags) ? post.tags : [])"
+            :key="tag"
+            class="px-3 py-1 rounded-lg text-sm font-medium bg-accent/10 text-accent"
+          >
+            {{ tag }}
+          </span>
+        </div>
+      </header>
+
+      <!-- Content -->
+      <div class="card">
+        <article class="prose prose-lg max-w-none prose-headings:font-display prose-headings:font-bold prose-a:text-accent prose-code:bg-muted prose-code:px-2 prose-code:py-1 prose-code:rounded" v-html="renderedContent"></article>
+      </div>
+
+      <!-- Footer -->
+      <div class="text-sm text-muted-foreground border-t border-border pt-6">
+        最后更新于 {{ formatDate(post.updatedAt) }}
       </div>
     </div>
+
+    <!-- Loading -->
+    <div v-else class="flex flex-col items-center justify-center py-32">
+      <div class="flex gap-1.5 mb-4">
+        <div class="w-2 h-2 rounded-full bg-accent animate-pulse"></div>
+        <div class="w-2 h-2 rounded-full bg-accent animate-pulse" style="animation-delay: 150ms"></div>
+        <div class="w-2 h-2 rounded-full bg-accent animate-pulse" style="animation-delay: 300ms"></div>
+      </div>
+      <p class="text-muted-foreground">加载中</p>
+    </div>
+  </div>
 </template>
 
 <script setup lang="ts">

@@ -1,103 +1,124 @@
 <template>
-  <div class="relative h-full" style="background: #fff">
-    <!-- 浮动工具栏 -->
-    <div class="absolute top-3 right-3 z-20 flex items-center gap-1.5">
+  <div class="relative h-full bg-background">
+    <!-- Floating Toolbar -->
+    <div class="absolute top-4 right-4 z-20 flex items-center gap-2">
       <button @click="showChapters = !showChapters"
-        class="w-8 h-8 flex items-center justify-center rounded-lg text-xs transition-all duration-150"
-        :style="showChapters ? 'background: #FC5531; color: white' : 'background: #f4f5f5; color: #555666'"
+        class="w-9 h-9 flex items-center justify-center rounded-xl transition-all duration-200"
+        :class="showChapters ? 'bg-accent text-accent-foreground shadow-md shadow-accent/20' : 'bg-card border border-border text-muted-foreground hover:text-foreground hover:border-accent/30'"
         :title="showChapters ? '隐藏目录' : '显示目录'">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+        </svg>
       </button>
       <button @click="showSettings = !showSettings"
-        class="w-8 h-8 flex items-center justify-center rounded-lg text-xs transition-all duration-150"
-        :style="showSettings ? 'background: #FC5531; color: white' : 'background: #f4f5f5; color: #555666'"
+        class="w-9 h-9 flex items-center justify-center rounded-xl transition-all duration-200"
+        :class="showSettings ? 'bg-accent text-accent-foreground shadow-md shadow-accent/20' : 'bg-card border border-border text-muted-foreground hover:text-foreground hover:border-accent/30'"
         title="设置">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V15a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.57 2.572-1.066z"/>
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+        </svg>
       </button>
     </div>
 
-    <!-- 章节目录 - 浮动面板 -->
+    <!-- Chapter Sidebar -->
     <Transition name="slide-left">
-      <div v-if="showChapters" class="absolute left-0 top-0 bottom-0 z-10 w-64 overflow-y-auto p-4 shadow-lg" style="background: #fff; border-right: 1px solid #e8e8ed">
-        <h2 class="text-sm font-bold text-gray-500 uppercase mb-3">章节目录</h2>
-        <div v-for="ch in chapters" :key="ch.id"
-          class="text-sm py-1.5 px-2 rounded cursor-pointer"
-          :class="ch.chapterNumber === currentChapterNum ? 'bg-blue-50 text-blue-600 font-medium' : 'text-gray-700 hover:bg-gray-100'"
-          @click="loadChapter(ch.chapterNumber); showChapters = false">
-          {{ ch.title }}
+      <div v-if="showChapters" class="absolute left-0 top-0 bottom-0 z-10 w-72 overflow-y-auto p-6 bg-card border-r border-border shadow-xl">
+        <h2 class="text-sm font-display font-bold text-muted-foreground uppercase tracking-wider mb-4">章节目录</h2>
+        <div class="space-y-1">
+          <div v-for="ch in chapters" :key="ch.id"
+            class="text-sm py-2 px-3 rounded-xl cursor-pointer transition-all duration-200"
+            :class="ch.chapterNumber === currentChapterNum
+              ? 'bg-accent/10 text-accent font-medium'
+              : 'text-foreground hover:bg-muted'"
+            @click="loadChapter(ch.chapterNumber); showChapters = false">
+            {{ ch.title }}
+          </div>
         </div>
       </div>
     </Transition>
 
-    <!-- 设置面板 - 浮动面板 -->
+    <!-- Settings Sidebar -->
     <Transition name="slide-right">
-      <div v-if="showSettings" class="absolute right-0 top-0 bottom-0 z-10 w-56 overflow-y-auto p-4 shadow-lg" style="background: #fff; border-left: 1px solid #e8e8ed">
-        <h3 class="text-sm font-bold text-gray-500 uppercase mb-3">设置</h3>
-        <div class="space-y-4">
+      <div v-if="showSettings" class="absolute right-0 top-0 bottom-0 z-10 w-64 overflow-y-auto p-6 bg-card border-l border-border shadow-xl">
+        <h3 class="text-sm font-display font-bold text-muted-foreground uppercase tracking-wider mb-4">设置</h3>
+        <div class="space-y-5">
           <div>
-            <label class="text-xs text-gray-500">字体大小: {{ fontSize }}px</label>
-            <input v-model.number="fontSize" type="range" min="12" max="24" class="w-full" />
+            <label class="text-xs font-medium text-muted-foreground mb-2 block">字体大小: {{ fontSize }}px</label>
+            <input v-model.number="fontSize" type="range" min="12" max="24" class="w-full accent-accent" />
           </div>
           <div>
-            <label class="text-xs text-gray-500">行高: {{ lineHeight }}</label>
-            <input v-model.number="lineHeight" type="range" min="1.2" max="2.5" step="0.1" class="w-full" />
+            <label class="text-xs font-medium text-muted-foreground mb-2 block">行高: {{ lineHeight }}</label>
+            <input v-model.number="lineHeight" type="range" min="1.2" max="2.5" step="0.1" class="w-full accent-accent" />
           </div>
           <div>
-            <label class="text-xs text-gray-500">技术/小说比例: {{ techRatio }}:1</label>
-            <input v-model.number="techRatio" type="range" min="1" max="5" step="1" class="w-full" />
+            <label class="text-xs font-medium text-muted-foreground mb-2 block">技术/小说比例: {{ techRatio }}:1</label>
+            <input v-model.number="techRatio" type="range" min="1" max="5" step="1" class="w-full accent-accent" />
           </div>
         </div>
       </div>
     </Transition>
 
-    <!-- 阅读区域 - 技术文章+小说交替显示 -->
+    <!-- Reading Area -->
     <main class="h-full overflow-y-auto p-8" ref="readerRef">
       <div v-if="currentChapter" class="max-w-3xl mx-auto">
-        <!-- 技术文章标题区 -->
-        <h1 class="text-xl font-bold mb-2" style="color: #222226">{{ techTitle }}</h1>
-        <div class="flex items-center gap-3 mb-6 text-xs" style="color: #999aaa">
+        <!-- Tech Article Header (disguise) -->
+        <h1 class="text-2xl font-display font-bold text-foreground mb-2">{{ techTitle }}</h1>
+        <div class="flex items-center gap-3 mb-8 text-xs text-muted-foreground">
           <span>{{ techAuthor }}</span>
           <span>{{ techDate }}</span>
-          <span class="px-1.5 py-0.5 rounded" style="background: #f0f7ff; color: #3178c6">{{ techTag }}</span>
+          <span class="px-2 py-0.5 rounded-lg bg-accent/10 text-accent font-medium">{{ techTag }}</span>
         </div>
 
-        <!-- 交替内容区域 -->
+        <!-- Interleaved Content -->
         <div :style="{ fontSize: fontSize + 'px', lineHeight: lineHeight }">
           <template v-for="(line, i) in displayLines" :key="i">
-            <!-- 技术图片 -->
-            <div v-if="line.type === 'image'" class="my-4">
-              <div class="rounded-lg overflow-hidden" style="border: 1px solid #e8e8ed">
-                <svg :viewBox="line.viewBox" class="w-full" style="background: #f9fafb">
+            <!-- Tech Image -->
+            <div v-if="line.type === 'image'" class="my-6">
+              <div class="rounded-2xl overflow-hidden border border-border shadow-sm">
+                <svg :viewBox="line.viewBox" class="w-full" style="background: rgba(0,82,255,0.02)">
                   <g v-html="line.svgContent"></g>
                 </svg>
               </div>
-              <p class="text-xs text-center mt-1.5" style="color: #999aaa">{{ line.caption }}</p>
+              <p class="text-xs text-center mt-2 text-muted-foreground">{{ line.caption }}</p>
             </div>
-            <!-- 技术代码块 -->
-            <div v-else-if="line.type === 'code-block'" class="my-3 rounded-lg overflow-hidden" style="border: 1px solid #e8e8ed">
-              <div class="px-3 py-1.5 text-[10px] uppercase tracking-wider" style="background: #f4f5f5; color: #999aaa; border-bottom: 1px solid #e8e8ed">{{ line.lang }}</div>
-              <pre class="px-3 py-2.5 text-xs overflow-x-auto" style="background: #f9fafb; color: #3178c6; font-family: 'Consolas', 'Courier New', monospace; line-height: 1.6">{{ line.text }}</pre>
+            <!-- Tech Code Block -->
+            <div v-else-if="line.type === 'code-block'" class="my-4 rounded-2xl overflow-hidden border border-border shadow-sm">
+              <div class="px-4 py-2 text-[10px] uppercase tracking-wider text-muted-foreground bg-muted/50 border-b border-border font-mono">{{ line.lang }}</div>
+              <pre class="px-4 py-3 text-xs overflow-x-auto text-accent font-mono leading-relaxed" style="background: rgba(0,82,255,0.03)">{{ line.text }}</pre>
             </div>
-            <!-- 技术文章行 -->
-            <div v-else-if="line.type === 'tech'" class="py-1" style="color: #222226; line-height: 1.8">
-              <span v-if="line.isCode" class="font-mono px-1.5 py-0.5 rounded" style="background: #f4f5f5; color: #3178c6; font-size: 0.9em">{{ line.text }}</span>
+            <!-- Tech Line -->
+            <div v-else-if="line.type === 'tech'" class="py-1 text-foreground leading-relaxed">
+              <span v-if="line.isCode" class="font-mono px-2 py-0.5 rounded-lg bg-muted text-accent text-[0.9em]">{{ line.text }}</span>
               <span v-else>{{ line.text }}</span>
             </div>
-            <!-- 技术小标题 -->
-            <div v-else-if="line.type === 'tech-heading'" class="mt-4 mb-2 font-semibold" style="color: #222226">
+            <!-- Tech Heading -->
+            <div v-else-if="line.type === 'tech-heading'" class="mt-5 mb-2 font-display font-semibold text-foreground">
               {{ line.text }}
             </div>
-            <!-- 小说内容行 -->
-            <div v-else class="py-0.5" style="color: #222226">
+            <!-- Novel Line -->
+            <div v-else class="py-0.5 text-foreground leading-relaxed">
               {{ line.text }}
             </div>
           </template>
         </div>
 
-        <!-- 章节导航 -->
-        <div class="flex justify-between mt-8">
-          <button v-if="currentChapterNum > 1" @click="loadChapter(currentChapterNum - 1)" class="px-4 py-2 text-sm rounded-lg" style="color: #FC5531" onmouseenter="this.style.background='#fff5f2'" onmouseleave="this.style.background='transparent'">上一章</button>
-          <button v-if="currentChapterNum < totalChapters" @click="loadChapter(currentChapterNum + 1)" class="px-4 py-2 text-sm rounded-lg ml-auto" style="color: #FC5531" onmouseenter="this.style.background='#fff5f2'" onmouseleave="this.style.background='transparent'">下一章</button>
+        <!-- Chapter Navigation -->
+        <div class="flex justify-between mt-10 pt-6 border-t border-border">
+          <button v-if="currentChapterNum > 1" @click="loadChapter(currentChapterNum - 1)"
+            class="btn-secondary">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+            </svg>
+            上一章
+          </button>
+          <button v-if="currentChapterNum < totalChapters" @click="loadChapter(currentChapterNum + 1)"
+            class="btn-primary ml-auto">
+            下一章
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+            </svg>
+          </button>
         </div>
       </div>
     </main>
@@ -119,12 +140,11 @@ const currentChapterNum = ref(1)
 const totalChapters = computed(() => chapters.value.length)
 const fontSize = ref(16)
 const lineHeight = ref(1.8)
-const techRatio = ref(2) // 技术行数:小说行数 = 2:1
+const techRatio = ref(2)
 const showChapters = ref(false)
 const showSettings = ref(false)
 const readerRef = ref<HTMLElement | null>(null)
 
-// 技术文章伪装数据 - 代码+解释成对出现
 const techPairs = [
   { code: '// 基于响应式原理的状态管理方案', text: '在Vue3中，ref和reactive的底层实现均基于Proxy代理机制，通过track与trigger函数实现依赖收集与派发更新。' },
   { code: 'const state = reactive({ count: 0 })', text: '当state.count发生变化时，自动触发相关副作用函数重新执行，无需手动订阅。' },
@@ -148,7 +168,6 @@ const techPairs = [
   { code: 'ctx.drawImage(canvas, 0, 0, w, h)', text: 'Canvas 2D的离屏渲染技术可实现高性能的图表和动画效果。' },
 ]
 
-// 技术小标题
 const techHeadings = [
   '响应式系统设计',
   '类型安全实践',
@@ -160,7 +179,6 @@ const techHeadings = [
   '数据流管理',
 ]
 
-// 技术代码块
 const techCodeBlocks = [
   { lang: 'typescript', code: `import { ref, computed, watch } from 'vue'\n\nexport function useCounter(initial = 0) {\n  const count = ref(initial)\n  const doubled = computed(() => count.value * 2)\n  const increment = () => count.value++\n  watch(count, (v) => console.log('count:', v))\n  return { count, doubled, increment }\n}` },
   { lang: 'typescript', code: `interface ApiResponse<T> {\n  code: number\n  data: T | null\n  message: string\n}\n\nasync function request<T>(url: string): Promise<ApiResponse<T>> {\n  const res = await fetch(url)\n  return res.json()\n}` },
@@ -170,86 +188,84 @@ const techCodeBlocks = [
   { lang: 'typescript', code: `const schema = z.object({\n  email: z.string().email(),\n  password: z.string().min(8),\n  role: z.enum(['admin', 'user']),\n})\ntype Form = z.infer<typeof schema>` },
 ]
 
-// 技术性SVG图片 - 架构图/流程图
 const techImages = [
   {
     viewBox: '0 0 600 200',
     svgContent: `
-      <rect x="10" y="60" width="120" height="60" rx="8" fill="#fff5f2" stroke="#FC5531" stroke-width="1.5"/>
-      <text x="70" y="95" text-anchor="middle" font-size="12" fill="#FC5531">Client</text>
-      <line x1="130" y1="90" x2="200" y2="90" stroke="#e8e8ed" stroke-width="1.5" marker-end="url(#arrow)"/>
-      <rect x="200" y="60" width="120" height="60" rx="8" fill="#f0f7ff" stroke="#3178c6" stroke-width="1.5"/>
-      <text x="260" y="95" text-anchor="middle" font-size="12" fill="#3178c6">API Server</text>
-      <line x1="320" y1="90" x2="390" y2="90" stroke="#e8e8ed" stroke-width="1.5" marker-end="url(#arrow)"/>
-      <rect x="390" y="60" width="120" height="60" rx="8" fill="#f0f9eb" stroke="#67c23a" stroke-width="1.5"/>
-      <text x="450" y="95" text-anchor="middle" font-size="12" fill="#67c23a">Database</text>
-      <defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="#e8e8ed"/></marker></defs>
+      <rect x="10" y="60" width="120" height="60" rx="12" fill="rgba(0,82,255,0.05)" stroke="#0052FF" stroke-width="1.5"/>
+      <text x="70" y="95" text-anchor="middle" font-size="12" fill="#0052FF">Client</text>
+      <line x1="130" y1="90" x2="200" y2="90" stroke="#e5e7eb" stroke-width="1.5" marker-end="url(#arrow)"/>
+      <rect x="200" y="60" width="120" height="60" rx="12" fill="rgba(0,82,255,0.05)" stroke="#4D7CFF" stroke-width="1.5"/>
+      <text x="260" y="95" text-anchor="middle" font-size="12" fill="#4D7CFF">API Server</text>
+      <line x1="320" y1="90" x2="390" y2="90" stroke="#e5e7eb" stroke-width="1.5" marker-end="url(#arrow)"/>
+      <rect x="390" y="60" width="120" height="60" rx="12" fill="rgba(16,185,129,0.05)" stroke="#10b981" stroke-width="1.5"/>
+      <text x="450" y="95" text-anchor="middle" font-size="12" fill="#10b981">Database</text>
+      <defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="#e5e7eb"/></marker></defs>
     `,
     caption: '图1: 三层架构数据流向',
   },
   {
     viewBox: '0 0 600 220',
     svgContent: `
-      <rect x="220" y="10" width="160" height="45" rx="8" fill="#fff5f2" stroke="#FC5531" stroke-width="1.5"/>
-      <text x="300" y="38" text-anchor="middle" font-size="11" fill="#FC5531">Vue Component</text>
-      <line x1="300" y1="55" x2="300" y2="80" stroke="#e8e8ed" stroke-width="1.5"/>
-      <rect x="140" y="80" width="140" height="45" rx="8" fill="#f0f7ff" stroke="#3178c6" stroke-width="1.5"/>
-      <text x="210" y="108" text-anchor="middle" font-size="11" fill="#3178c6">Composable</text>
-      <rect x="320" y="80" width="140" height="45" rx="8" fill="#f0f7ff" stroke="#3178c6" stroke-width="1.5"/>
-      <text x="390" y="108" text-anchor="middle" font-size="11" fill="#3178c6">Pinia Store</text>
-      <line x1="300" y1="55" x2="210" y2="80" stroke="#e8e8ed" stroke-width="1.5"/>
-      <line x1="300" y1="55" x2="390" y2="80" stroke="#e8e8ed" stroke-width="1.5"/>
-      <line x1="210" y1="125" x2="210" y2="150" stroke="#e8e8ed" stroke-width="1.5"/>
-      <line x1="390" y1="125" x2="390" y2="150" stroke="#e8e8ed" stroke-width="1.5"/>
-      <rect x="100" y="150" width="140" height="45" rx="8" fill="#f0f9eb" stroke="#67c23a" stroke-width="1.5"/>
-      <text x="170" y="178" text-anchor="middle" font-size="11" fill="#67c23a">API Client</text>
-      <rect x="320" y="150" width="140" height="45" rx="8" fill="#fdf6ec" stroke="#e6a23c" stroke-width="1.5"/>
-      <text x="390" y="178" text-anchor="middle" font-size="11" fill="#e6a23c">Cache Layer</text>
+      <rect x="220" y="10" width="160" height="45" rx="10" fill="rgba(0,82,255,0.05)" stroke="#0052FF" stroke-width="1.5"/>
+      <text x="300" y="38" text-anchor="middle" font-size="11" fill="#0052FF">Vue Component</text>
+      <line x1="300" y1="55" x2="300" y2="80" stroke="#e5e7eb" stroke-width="1.5"/>
+      <rect x="140" y="80" width="140" height="45" rx="10" fill="rgba(77,124,255,0.05)" stroke="#4D7CFF" stroke-width="1.5"/>
+      <text x="210" y="108" text-anchor="middle" font-size="11" fill="#4D7CFF">Composable</text>
+      <rect x="320" y="80" width="140" height="45" rx="10" fill="rgba(77,124,255,0.05)" stroke="#4D7CFF" stroke-width="1.5"/>
+      <text x="390" y="108" text-anchor="middle" font-size="11" fill="#4D7CFF">Pinia Store</text>
+      <line x1="300" y1="55" x2="210" y2="80" stroke="#e5e7eb" stroke-width="1.5"/>
+      <line x1="300" y1="55" x2="390" y2="80" stroke="#e5e7eb" stroke-width="1.5"/>
+      <line x1="210" y1="125" x2="210" y2="150" stroke="#e5e7eb" stroke-width="1.5"/>
+      <line x1="390" y1="125" x2="390" y2="150" stroke="#e5e7eb" stroke-width="1.5"/>
+      <rect x="100" y="150" width="140" height="45" rx="10" fill="rgba(16,185,129,0.05)" stroke="#10b981" stroke-width="1.5"/>
+      <text x="170" y="178" text-anchor="middle" font-size="11" fill="#10b981">API Client</text>
+      <rect x="320" y="150" width="140" height="45" rx="10" fill="rgba(245,158,11,0.05)" stroke="#f59e0b" stroke-width="1.5"/>
+      <text x="390" y="178" text-anchor="middle" font-size="11" fill="#f59e0b">Cache Layer</text>
     `,
     caption: '图2: 前端状态管理架构',
   },
   {
     viewBox: '0 0 600 180',
     svgContent: `
-      <rect x="20" y="30" width="100" height="50" rx="6" fill="#f0f7ff" stroke="#3178c6" stroke-width="1"/>
-      <text x="70" y="60" text-anchor="middle" font-size="10" fill="#3178c6">Vite Dev</text>
-      <rect x="20" y="100" width="100" height="50" rx="6" fill="#f0f7ff" stroke="#3178c6" stroke-width="1"/>
-      <text x="70" y="130" text-anchor="middle" font-size="10" fill="#3178c6">Vite Build</text>
-      <line x1="120" y1="55" x2="180" y2="80" stroke="#e8e8ed" stroke-width="1.5"/>
-      <line x1="120" y1="125" x2="180" y2="100" stroke="#e8e8ed" stroke-width="1.5"/>
-      <rect x="180" y="60" width="120" height="60" rx="8" fill="#fff5f2" stroke="#FC5531" stroke-width="1.5"/>
-      <text x="240" y="95" text-anchor="middle" font-size="11" fill="#FC5531">CI/CD Pipeline</text>
-      <line x1="300" y1="90" x2="360" y2="90" stroke="#e8e8ed" stroke-width="1.5"/>
-      <rect x="360" y="60" width="100" height="60" rx="8" fill="#f0f9eb" stroke="#67c23a" stroke-width="1.5"/>
-      <text x="410" y="85" text-anchor="middle" font-size="10" fill="#67c23a">Docker</text>
-      <text x="410" y="100" text-anchor="middle" font-size="10" fill="#67c23a">Image</text>
-      <line x1="460" y1="90" x2="520" y2="90" stroke="#e8e8ed" stroke-width="1.5"/>
-      <rect x="520" y="60" width="70" height="60" rx="8" fill="#fdf6ec" stroke="#e6a23c" stroke-width="1.5"/>
-      <text x="555" y="95" text-anchor="middle" font-size="10" fill="#e6a23c">K8s</text>
+      <rect x="20" y="30" width="100" height="50" rx="8" fill="rgba(77,124,255,0.05)" stroke="#4D7CFF" stroke-width="1"/>
+      <text x="70" y="60" text-anchor="middle" font-size="10" fill="#4D7CFF">Vite Dev</text>
+      <rect x="20" y="100" width="100" height="50" rx="8" fill="rgba(77,124,255,0.05)" stroke="#4D7CFF" stroke-width="1"/>
+      <text x="70" y="130" text-anchor="middle" font-size="10" fill="#4D7CFF">Vite Build</text>
+      <line x1="120" y1="55" x2="180" y2="80" stroke="#e5e7eb" stroke-width="1.5"/>
+      <line x1="120" y1="125" x2="180" y2="100" stroke="#e5e7eb" stroke-width="1.5"/>
+      <rect x="180" y="60" width="120" height="60" rx="12" fill="rgba(0,82,255,0.05)" stroke="#0052FF" stroke-width="1.5"/>
+      <text x="240" y="95" text-anchor="middle" font-size="11" fill="#0052FF">CI/CD Pipeline</text>
+      <line x1="300" y1="90" x2="360" y2="90" stroke="#e5e7eb" stroke-width="1.5"/>
+      <rect x="360" y="60" width="100" height="60" rx="12" fill="rgba(16,185,129,0.05)" stroke="#10b981" stroke-width="1.5"/>
+      <text x="410" y="85" text-anchor="middle" font-size="10" fill="#10b981">Docker</text>
+      <text x="410" y="100" text-anchor="middle" font-size="10" fill="#10b981">Image</text>
+      <line x1="460" y1="90" x2="520" y2="90" stroke="#e5e7eb" stroke-width="1.5"/>
+      <rect x="520" y="60" width="70" height="60" rx="12" fill="rgba(245,158,11,0.05)" stroke="#f59e0b" stroke-width="1.5"/>
+      <text x="555" y="95" text-anchor="middle" font-size="10" fill="#f59e0b">K8s</text>
     `,
     caption: '图3: CI/CD部署流水线',
   },
   {
     viewBox: '0 0 600 200',
     svgContent: `
-      <circle cx="300" cy="100" r="80" fill="none" stroke="#3178c6" stroke-width="1.5" stroke-dasharray="4 2"/>
-      <circle cx="300" cy="100" r="50" fill="none" stroke="#FC5531" stroke-width="1.5" stroke-dasharray="4 2"/>
-      <circle cx="300" cy="100" r="20" fill="#fff5f2" stroke="#FC5531" stroke-width="1.5"/>
-      <text x="300" y="105" text-anchor="middle" font-size="9" fill="#FC5531">Core</text>
-      <rect x="260" y="10" width="80" height="25" rx="4" fill="#f0f7ff" stroke="#3178c6" stroke-width="1"/>
-      <text x="300" y="27" text-anchor="middle" font-size="9" fill="#3178c6">Plugin A</text>
-      <rect x="420" y="85" width="80" height="25" rx="4" fill="#f0f7ff" stroke="#3178c6" stroke-width="1"/>
-      <text x="460" y="102" text-anchor="middle" font-size="9" fill="#3178c6">Plugin B</text>
-      <rect x="260" y="165" width="80" height="25" rx="4" fill="#f0f7ff" stroke="#3178c6" stroke-width="1"/>
-      <text x="300" y="182" text-anchor="middle" font-size="9" fill="#3178c6">Plugin C</text>
-      <rect x="100" y="85" width="80" height="25" rx="4" fill="#f0f7ff" stroke="#3178c6" stroke-width="1"/>
-      <text x="140" y="102" text-anchor="middle" font-size="9" fill="#3178c6">Plugin D</text>
+      <circle cx="300" cy="100" r="80" fill="none" stroke="#4D7CFF" stroke-width="1.5" stroke-dasharray="4 2"/>
+      <circle cx="300" cy="100" r="50" fill="none" stroke="#0052FF" stroke-width="1.5" stroke-dasharray="4 2"/>
+      <circle cx="300" cy="100" r="20" fill="rgba(0,82,255,0.05)" stroke="#0052FF" stroke-width="1.5"/>
+      <text x="300" y="105" text-anchor="middle" font-size="9" fill="#0052FF">Core</text>
+      <rect x="260" y="10" width="80" height="25" rx="6" fill="rgba(77,124,255,0.05)" stroke="#4D7CFF" stroke-width="1"/>
+      <text x="300" y="27" text-anchor="middle" font-size="9" fill="#4D7CFF">Plugin A</text>
+      <rect x="420" y="85" width="80" height="25" rx="6" fill="rgba(77,124,255,0.05)" stroke="#4D7CFF" stroke-width="1"/>
+      <text x="460" y="102" text-anchor="middle" font-size="9" fill="#4D7CFF">Plugin B</text>
+      <rect x="260" y="165" width="80" height="25" rx="6" fill="rgba(77,124,255,0.05)" stroke="#4D7CFF" stroke-width="1"/>
+      <text x="300" y="182" text-anchor="middle" font-size="9" fill="#4D7CFF">Plugin C</text>
+      <rect x="100" y="85" width="80" height="25" rx="6" fill="rgba(77,124,255,0.05)" stroke="#4D7CFF" stroke-width="1"/>
+      <text x="140" y="102" text-anchor="middle" font-size="9" fill="#4D7CFF">Plugin D</text>
     `,
     caption: '图4: 插件化架构设计',
   },
 ]
 
-// 伪装标题/作者/日期
 const techTitle = computed(() => {
   if (!currentChapter.value) return ''
   const titles = [
@@ -275,7 +291,6 @@ const techTag = computed(() => {
   return tags[currentChapterNum.value % tags.length]
 })
 
-// 将小说内容与技术文章交替排列，技术内容占比为小说的 techRatio 倍
 interface DisplayLine {
   type: 'tech' | 'novel' | 'code-block' | 'tech-heading' | 'image'
   text: string
@@ -297,39 +312,29 @@ const displayLines = computed<DisplayLine[]>(() => {
   let codeBlockIdx = 0
   let imageIdx = 0
 
-  // 每隔 novelInterval 行小说，插入 techRatio 行技术内容
-  // novelInterval = 1 表示每1行小说后插入techRatio行技术内容
   const novelInterval = 1
 
   for (let i = 0; i < novelLines.length; i++) {
-    // 每隔 novelInterval 行小说，插入技术内容块
     if (i > 0 && i % novelInterval === 0) {
-      // 插入 techRatio 行技术内容
       for (let t = 0; t < techRatio.value; t++) {
-        // 每8行技术内容中：1行小标题 + 2行代码+解释 + 1行代码块 + 1行图片
         const cyclePos = techIdx % 8
 
         if (cyclePos === 0) {
-          // 技术小标题
           result.push({ type: 'tech-heading', text: techHeadings[headingIdx % techHeadings.length] })
           headingIdx++
         } else if (cyclePos === 1 || cyclePos === 2) {
-          // 代码+解释对
           const pair = techPairs[techIdx % techPairs.length]
           result.push({ type: 'tech', text: pair.code, isCode: true })
           result.push({ type: 'tech', text: pair.text, isCode: false })
         } else if (cyclePos === 4) {
-          // 代码块
           const block = techCodeBlocks[codeBlockIdx % techCodeBlocks.length]
           result.push({ type: 'code-block', text: block.code, lang: block.lang })
           codeBlockIdx++
         } else if (cyclePos === 6) {
-          // 技术图片
           const img = techImages[imageIdx % techImages.length]
           result.push({ type: 'image', viewBox: img.viewBox, svgContent: img.svgContent, caption: img.caption })
           imageIdx++
         } else {
-          // 普通技术行
           const pair = techPairs[techIdx % techPairs.length]
           result.push({ type: 'tech', text: pair.code, isCode: true })
           result.push({ type: 'tech', text: pair.text, isCode: false })
@@ -337,7 +342,6 @@ const displayLines = computed<DisplayLine[]>(() => {
         techIdx++
       }
     }
-    // 小说行
     result.push({ type: 'novel', text: novelLines[i] })
   }
 
@@ -378,7 +382,7 @@ onMounted(async () => {
 <style scoped>
 .slide-left-enter-active,
 .slide-left-leave-active {
-  transition: transform 0.2s ease;
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .slide-left-enter-from,
 .slide-left-leave-to {
@@ -387,7 +391,7 @@ onMounted(async () => {
 
 .slide-right-enter-active,
 .slide-right-leave-active {
-  transition: transform 0.2s ease;
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .slide-right-enter-from,
 .slide-right-leave-to {
