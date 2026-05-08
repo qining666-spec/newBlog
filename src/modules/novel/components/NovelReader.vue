@@ -1,13 +1,32 @@
 <template>
-  <div class="relative h-full bg-background">
+  <div class="relative h-full bg-background" @click="handlePageClick">
+    <!-- Reading Progress Bar -->
+    <div class="absolute top-0 left-0 right-0 z-30 h-1 bg-muted">
+      <div class="h-full bg-accent transition-all duration-300" :style="{ width: progressPercent + '%' }"></div>
+    </div>
+
     <!-- Floating Toolbar -->
     <div class="absolute top-4 right-4 z-20 flex items-center gap-2">
+      <button v-if="currentChapterNum > 1" @click.stop="loadChapter(1)"
+        class="w-9 h-9 flex items-center justify-center rounded-xl transition-all duration-200 bg-card border border-border text-muted-foreground hover:text-foreground hover:border-accent/30"
+        title="跳到首章">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"/>
+        </svg>
+      </button>
       <button @click="showChapters = !showChapters"
         class="w-9 h-9 flex items-center justify-center rounded-xl transition-all duration-200"
         :class="showChapters ? 'bg-accent text-accent-foreground shadow-md shadow-accent/20' : 'bg-card border border-border text-muted-foreground hover:text-foreground hover:border-accent/30'"
         :title="showChapters ? '隐藏目录' : '显示目录'">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+        </svg>
+      </button>
+      <button v-if="currentChapterNum < totalChapters" @click.stop="loadChapter(totalChapters)"
+        class="w-9 h-9 flex items-center justify-center rounded-xl transition-all duration-200 bg-card border border-border text-muted-foreground hover:text-foreground hover:border-accent/30"
+        title="跳到末章">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"/>
         </svg>
       </button>
       <button @click="showSettings = !showSettings"
@@ -19,6 +38,29 @@
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
         </svg>
       </button>
+    </div>
+
+    <!-- Chapter Info (Top Center) -->
+    <div class="absolute top-4 left-1/2 -translate-x-1/2 z-20 px-4 py-2 rounded-xl bg-card/80 backdrop-blur-sm border border-border text-sm">
+      <span class="text-muted-foreground">第</span>
+      <span class="font-medium text-foreground mx-1">{{ currentChapterNum }}</span>
+      <span class="text-muted-foreground">/</span>
+      <span class="text-muted-foreground mx-1">{{ totalChapters }}</span>
+      <span class="text-muted-foreground">章</span>
+    </div>
+
+    <!-- Click Navigation Hint (shows on hover edges) -->
+    <div class="absolute left-0 top-0 bottom-0 w-16 z-10 opacity-0 hover:opacity-100 transition-opacity pointer-events-none flex items-center justify-center"
+      v-if="currentChapterNum > 1">
+      <div class="px-2 py-1 rounded-lg bg-card/90 backdrop-blur-sm border border-border text-xs text-muted-foreground">
+        ← 上一章
+      </div>
+    </div>
+    <div class="absolute right-0 top-0 bottom-0 w-16 z-10 opacity-0 hover:opacity-100 transition-opacity pointer-events-none flex items-center justify-center"
+      v-if="currentChapterNum < totalChapters">
+      <div class="px-2 py-1 rounded-lg bg-card/90 backdrop-blur-sm border border-border text-xs text-muted-foreground">
+        下一章 →
+      </div>
     </div>
 
     <!-- Chapter Sidebar -->
@@ -126,7 +168,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { get, put } from '@shared/api/client'
 import type { Chapter } from '@shared/types'
@@ -144,6 +186,14 @@ const techRatio = ref(2)
 const showChapters = ref(false)
 const showSettings = ref(false)
 const readerRef = ref<HTMLElement | null>(null)
+const scrollPercent = ref(0)
+
+const progressPercent = computed(() => {
+  if (totalChapters.value === 0) return 0
+  const chapterProgress = (currentChapterNum.value - 1) / totalChapters.value
+  const chapterWeight = 1 / totalChapters.value
+  return (chapterProgress + chapterWeight * scrollPercent.value / 100) * 100
+})
 
 const techPairs = [
   { code: '// 基于响应式原理的状态管理方案', text: '在Vue3中，ref和reactive的底层实现均基于Proxy代理机制，通过track与trigger函数实现依赖收集与派发更新。' },
@@ -355,15 +405,78 @@ async function fetchChapters() {
   }
 }
 
-async function loadChapter(num: number) {
+async function loadChapter(num: number, savedScrollPosition?: number) {
   const res = await get<Chapter>(`/novels/${novelId.value}/chapters/${num}`)
   if (res.code === 200 && res.data) {
     currentChapter.value = res.data
     currentChapterNum.value = num
-    if (res.data.id) {
-      put(`/novels/${novelId.value}/progress`, { chapterId: res.data.id, scrollPosition: 0 })
+    scrollPercent.value = 0
+    if (readerRef.value) {
+      readerRef.value.scrollTop = savedScrollPosition || 0
     }
-    if (readerRef.value) readerRef.value.scrollTop = 0
+  }
+}
+
+let saveProgressTimer: ReturnType<typeof setTimeout> | null = null
+
+function saveProgress() {
+  if (!currentChapter.value?.id || !readerRef.value) return
+  if (saveProgressTimer) clearTimeout(saveProgressTimer)
+  
+  saveProgressTimer = setTimeout(() => {
+    const scrollPosition = readerRef.value?.scrollTop || 0
+    put(`/novels/${novelId.value}/progress`, { 
+      chapterId: currentChapter.value!.id, 
+      scrollPosition 
+    })
+  }, 500)
+}
+
+function handlePageClick(e: MouseEvent) {
+  if (showChapters.value || showSettings.value) return
+  const target = e.target as HTMLElement
+  if (target.closest('button')) return
+
+  const width = window.innerWidth
+  const x = e.clientX
+  const edgeWidth = width * 0.15
+
+  if (x < edgeWidth && currentChapterNum.value > 1) {
+    saveProgress()
+    loadChapter(currentChapterNum.value - 1)
+  } else if (x > width - edgeWidth && currentChapterNum.value < totalChapters.value) {
+    saveProgress()
+    loadChapter(currentChapterNum.value + 1)
+  }
+}
+
+function handleKeydown(e: KeyboardEvent) {
+  if (showChapters.value || showSettings.value) return
+  if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
+
+  if (e.key === 'ArrowLeft' && currentChapterNum.value > 1) {
+    saveProgress()
+    loadChapter(currentChapterNum.value - 1)
+  } else if (e.key === 'ArrowRight' && currentChapterNum.value < totalChapters.value) {
+    saveProgress()
+    loadChapter(currentChapterNum.value + 1)
+  } else if (e.key === ' ' && currentChapterNum.value < totalChapters.value) {
+    e.preventDefault()
+    saveProgress()
+    loadChapter(currentChapterNum.value + 1)
+  }
+}
+
+function handleScroll() {
+  if (!readerRef.value) return
+  const el = readerRef.value
+  scrollPercent.value = (el.scrollTop / (el.scrollHeight - el.clientHeight)) * 100 || 0
+
+  saveProgress()
+
+  if (scrollPercent.value > 95 && currentChapterNum.value < totalChapters.value) {
+    saveProgress()
+    loadChapter(currentChapterNum.value + 1)
   }
 }
 
@@ -372,10 +485,21 @@ onMounted(async () => {
   const progressRes = await get<any>(`/novels/${novelId.value}/progress`)
   if (progressRes.code === 200 && progressRes.data) {
     const chNum = chapters.value.find(c => c.id === progressRes.data.currentChapterId)?.chapterNumber || 1
-    await loadChapter(chNum)
+    await loadChapter(chNum, progressRes.data.currentScrollPosition || 0)
   } else if (chapters.value.length > 0) {
     await loadChapter(1)
   }
+
+  window.addEventListener('keydown', handleKeydown)
+  if (readerRef.value) {
+    readerRef.value.addEventListener('scroll', handleScroll)
+  }
+})
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleKeydown)
+  if (saveProgressTimer) clearTimeout(saveProgressTimer)
+  saveProgress()
 })
 </script>
 
